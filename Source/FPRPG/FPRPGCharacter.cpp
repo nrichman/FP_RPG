@@ -125,9 +125,6 @@ void AFPRPGCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 
 void AFPRPGCharacter::OnFire()
 {
-
-	UE_LOG(LogTemp, Warning, TEXT("BANG BANG"));
-
 	// try and fire a projectile
 	if (ProjectileClass != NULL)
 	{
@@ -237,13 +234,29 @@ void AFPRPGCharacter::EndTouch(const ETouchIndex::Type FingerIndex, const FVecto
 //	}
 //}
 
+bool AFPRPGCharacter::EnableTouchscreenMovement(class UInputComponent* PlayerInputComponent)
+{
+	if (FPlatformMisc::SupportsTouchInput() || GetDefault<UInputSettings>()->bUseMouseForTouch)
+	{
+		PlayerInputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AFPRPGCharacter::BeginTouch);
+		PlayerInputComponent->BindTouch(EInputEvent::IE_Released, this, &AFPRPGCharacter::EndTouch);
+
+		//Commenting this out to be more consistent with FPS BP template.
+		//PlayerInputComponent->BindTouch(EInputEvent::IE_Repeat, this, &AFPRPGCharacter::TouchUpdate);
+		return true;
+	}
+
+	return false;
+}
+
 void AFPRPGCharacter::MoveForward(float Value)
 {
 	if (Value != 0.0f && !IsMoving)
 	{
-		IsMoving = true;
 		FVector CurrentLocation = this->GetActorLocation();
 		destination = FVector(CurrentLocation.X + Value * GetMoveDist(), CurrentLocation.Y, CurrentLocation.Z);
+		IsMoving = true;
+		CheckMove();
 	}
 }
 
@@ -251,26 +264,48 @@ void AFPRPGCharacter::MoveRight(float Value)
 {
 	if (Value != 0.0f && !IsMoving)
 	{
-		IsMoving = true;
 		FVector CurrentLocation = this->GetActorLocation();
 		destination = FVector(CurrentLocation.X, CurrentLocation.Y + Value * GetMoveDist(), CurrentLocation.Z);
+		IsMoving = true;
 	}
 }
+
+void AFPRPGCharacter::CheckMove()
+{
+	UWorld* const World = GetWorld();
+	if (World != NULL)
+	{
+		AActor* TargetLocation = World->SpawnActor<AFPRPGProjectile>(ProjectileClass, destination, FRotator(0, 0, 0));
+		TArray<AActor*> CollectedActors;
+		TargetLocation->GetOverlappingActors(CollectedActors);
+
+		FVector BoxExtent = FVector(0, 0, 0);
+
+		for (AActor* actor : CollectedActors)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s"), *actor->GetName());
+		}
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *TargetLocation->GetName());
+
+		TargetLocation->AActor::~AActor();
+	}
+}
+
 
 // Gets the movement distance based on the tile beneath the player
 int AFPRPGCharacter::GetMoveDist()
 {
 	TArray<AActor*> CollectedActors;
 	this->GetOverlappingActors(CollectedActors);
+	
+	FVector BoxExtent = FVector(0, 0, 0);
 
 	for (AActor* actor : CollectedActors)
 	{
 		FVector Origin;
-		FVector BoxExtent;
 		actor->GetActorBounds(false, Origin, BoxExtent);
-		return BoxExtent.X * 2;
 	}
-	return 0;
+	return BoxExtent.X * 2;
 }
 
 void AFPRPGCharacter::TurnAtRate(float Rate)
@@ -283,21 +318,6 @@ void AFPRPGCharacter::LookUpAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
-}
-
-bool AFPRPGCharacter::EnableTouchscreenMovement(class UInputComponent* PlayerInputComponent)
-{
-	if (FPlatformMisc::SupportsTouchInput() || GetDefault<UInputSettings>()->bUseMouseForTouch)
-	{
-		PlayerInputComponent->BindTouch(EInputEvent::IE_Pressed, this, &AFPRPGCharacter::BeginTouch);
-		PlayerInputComponent->BindTouch(EInputEvent::IE_Released, this, &AFPRPGCharacter::EndTouch);
-
-		//Commenting this out to be more consistent with FPS BP template.
-		//PlayerInputComponent->BindTouch(EInputEvent::IE_Repeat, this, &AFPRPGCharacter::TouchUpdate);
-		return true;
-	}
-	
-	return false;
 }
 
 void AFPRPGCharacter::MovePlayer(float DeltaTime)

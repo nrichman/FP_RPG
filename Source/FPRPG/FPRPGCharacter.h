@@ -88,6 +88,8 @@ protected:
 	/** Handles stafing movement, left and right */
 	void MoveRight(float Val);
 
+	void CheckMove();
+
 	int GetMoveDist();
 
 	void MovePlayer(float DeltaTime);
