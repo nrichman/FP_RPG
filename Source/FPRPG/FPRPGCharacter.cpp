@@ -287,7 +287,7 @@ void AFPRPGCharacter::CheckMove()
 		}
 		UE_LOG(LogTemp, Warning, TEXT("%s"), *TargetLocation->GetName());
 
-		TargetLocation->AActor::~AActor();
+		TargetLocation->AActor::Destroy();
 	}
 }
 
